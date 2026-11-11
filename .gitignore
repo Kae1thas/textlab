@@ -1,0 +1,19 @@
+# Окружение
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Данные и результаты локальных запусков (скачиваются prepare_data.py / создаются приложением)
+/data/
+/model_store/
+textlab.sqlite3
+textlab.sqlite3-*
+/hf_cache/
+
+# Служебное
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+# Ставится скриптом install-gpu.ps1 ПОСЛЕ PyTorch с CUDA:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+transformers>=4.44
+tokenizers>=0.19
+safetensors>=0.4
+sentencepiece>=0.2

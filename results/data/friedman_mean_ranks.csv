@@ -1,0 +1,8 @@
+﻿model;mean_rank
+LinearSVM;2,25
+BERT-FT;2,5
+MLP;3,25
+LogReg;3,5
+CNB;4,5
+MNB;5,75
+BERT-emb+LR;6,25

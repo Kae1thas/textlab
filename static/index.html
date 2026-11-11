@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TextLab — сравнение моделей</title>
+<link rel="stylesheet" href="/assets/styles.css?v=20261108">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">T</span><div><b>TextLab</b><small>Курсовой проект</small></div></div>
+  <span class="local" id="sysInfo">Сравнительный анализ алгоритмов классификации текстов</span>
+</header>
+<main>
+  <section class="hero">
+    <div>
+      <h1>Классификация текстов</h1>
+      <p class="sub">Классические модели, нейросеть и трансформеры на общих разбиениях, с повторами и проверкой значимости различий.</p>
+    </div>
+    <nav class="page-nav">
+      <a href="#workspace">Эксперимент</a><a href="#journal">Журнал</a><a href="#overview">Сводка</a><a href="#inspector">Проверка текста</a>
+    </nav>
+  </section>
+
+  <div class="layout" id="workspace">
+    <section class="panel setup">
+      <div class="section-head"><h2>Параметры эксперимента</h2><span class="badge" id="rowsBadge">—</span></div>
+
+      <div class="dataset-switch">
+        <select id="datasetSelect" aria-label="Набор данных"></select>
+        <label class="btn secondary upload">Загрузить CSV<input id="csvFile" type="file" accept=".csv,.tsv,.txt,text/csv"></label>
+      </div>
+
+      <form id="uploadForm" class="upload-form" hidden>
+        <b id="uploadFile"></b>
+        <label>Название набора<input id="uploadName" maxlength="120"></label>
+        <div class="row2">
+          <label>Столбец текста<select id="uploadText"></select></label>
+          <label>Столбец метки<select id="uploadLabel"></select></label>
+        </div>
+        <div class="row2"><button class="btn" type="submit">Добавить набор</button><button class="btn secondary" type="button" id="uploadCancel">Отмена</button></div>
+        <p class="hint" id="uploadStatus"></p>
+      </form>
+
+      <div class="data-preview" id="datasetCard">
+        <div class="dataset-title"><b id="datasetName">—</b><button class="link danger" id="datasetDelete" hidden>Удалить</button></div>
+        <small id="datasetDesc"></small>
+        <div class="distribution" id="distribution"></div>
+        <div class="legend" id="distLegend"></div>
+      </div>
+      <p class="notice" id="missingNotice" hidden></p>
+
+      <div class="controls">
+        <label>Доля теста <b id="splitValue">20%</b><input id="split" type="range" min="10" max="40" value="20"></label>
+        <label>Строк в выборке <b id="sampleValue">—</b><input id="sampleRows" type="range" min="500" max="500000" step="500" value="50000"></label>
+      </div>
+      <div class="controls">
+        <label>Повторов (seed, seed+1, …)<input id="repeats" type="number" value="5" min="1" max="20"></label>
+        <label>Начальный seed<input id="seed" type="number" value="42" min="0" max="99999"></label>
+      </div>
+
+      <div class="controls">
+        <label>Режим<select id="mode"><option value="compare">Сравнение моделей</option><option value="curve">Кривая обучения</option></select></label>
+        <label id="sizesLabel" hidden>Размеры обучающей выборки<input id="trainSizes" value="2000, 5000, 10000, 20000, 40000"></label>
+      </div>
+      <p class="hint" id="modeHint" hidden>Тест общий для всех размеров; обучающие выборки вложены друг в друга. Сравнение моделей и сохранённые модели — для наибольшего размера.</p>
+      <p class="model-label">Модели для сравнения</p>
+      <div class="model-list" id="modelList"></div>
+
+      <fieldset class="transformer-opts" id="transformerOpts" hidden>
+        <legend>Трансформер</legend>
+        <label>Модель HuggingFace<input id="trModel" list="trPresets" value="cointegrated/rubert-tiny2"><datalist id="trPresets"></datalist></label>
+        <div class="row2">
+          <label>Эпох fine-tuning<input id="trEpochs" type="number" value="3" min="1" max="20"></label>
+          <label>Макс. длина, токенов<input id="trLen" type="number" value="256" min="16" max="512" step="16"></label>
+        </div>
+        <p class="hint" id="trPresetNote"></p>
+      </fieldset>
+
+      <button class="run" id="run">Поставить в очередь</button>
+      <p class="hint" id="runHint">Обучение идёт в фоне на сервере; страницу можно закрыть — результаты сохранятся в SQLite.</p>
+    </section>
+
+    <section class="panel results" aria-live="polite">
+      <div class="section-head"><h2 id="resultTitle">Результаты эксперимента</h2>
+        <div class="exports" id="exports" hidden>
+          <a class="link" id="expRuns">Повторы CSV</a><a class="link" id="expSummary">Сводка CSV</a><a class="link" id="expCmp">Сравнения CSV</a>
+        </div>
+      </div>
+      <div id="empty" class="empty"><b>Эксперимент ещё не запущен</b><span>Выберите набор данных и модели в панели слева или откройте запуск из журнала.</span></div>
+      <div id="jobState" class="job" hidden>
+        <div class="job-head"><b id="jobStatus"></b><button class="btn secondary small" id="jobCancel">Остановить</button></div>
+        <div class="progress"><i id="jobBar"></i></div>
+        <p id="jobMessage"></p>
+        <div id="jobPartial"></div>
+      </div>
+      <div id="resultsContent" hidden>
+        <div class="meta-row" id="runMeta"></div>
+        <div id="curveBlock" hidden>
+          <h3 style="margin-top:4px">Кривая обучения</h3>
+          <div class="curve" id="curveChart"></div>
+          <div class="table-wrap"><table id="curveTable"></table></div>
+          <h3 id="summaryTitle">Сравнение при наибольшем объёме</h3>
+        </div>
+        <div class="chart-head"><span>Среднее по повторам, планки — 95% доверительный интервал</span>
+          <select id="chartMetric" aria-label="Метрика графика"></select></div>
+        <div class="chart" id="chart"></div>
+        <div class="table-wrap"><table class="results-table" id="resultsTable"></table></div>
+        <p class="hint" id="tableNote"></p>
+        <h3>Значимость различий (Macro F1)</h3>
+        <div class="table-wrap"><table id="cmpTable"></table></div>
+        <p class="hint" id="cmpNote"></p>
+        <h3>Матрицы ошибок и метрики по классам <small>(первый повтор)</small></h3>
+        <div class="matrix-area" id="matrixArea"></div>
+        <details class="env"><summary>Конфигурация и окружение запуска</summary><pre id="envInfo"></pre></details>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" id="journal">
+    <div class="section-head"><h2>Журнал экспериментов</h2><button class="link" id="refreshJournal">Обновить</button></div>
+    <div class="table-wrap"><table id="journalTable"></table></div>
+  </section>
+
+  <section class="panel" id="overview">
+    <div class="section-head"><h2>Сводка по всем завершённым запускам</h2><button class="link" id="refreshOverview">Обновить</button></div>
+    <p class="hint">Группировка: набор данных × размер обучающей выборки × модель. Среднее и стандартное отклонение по всем повторам всех экспериментов группы.</p>
+    <div class="table-wrap"><table id="overviewTable"></table></div>
+  </section>
+
+  <section class="panel inspector" id="inspector">
+    <div class="section-head"><h2>Проверка текста</h2></div>
+    <label>Обученные модели эксперимента<select id="inspectExperiment"></select></label>
+    <label>Ваш текст<textarea id="inspectText" rows="5" maxlength="30000" placeholder="Вставьте новость, отзыв или другой текст на языке выбранного датасета…"></textarea></label>
+    <button class="run" id="inspectRun">Классифицировать</button>
+    <p id="inspectStatus" class="hint" role="status"></p>
+    <div id="inspectOutput" class="inspect-grid"></div>
+  </section>
+
+  <footer><span>TextLab / Классификация текстов</span><span id="footerEnv">Результаты сохраняются на этом компьютере</span></footer>
+</main>
+<script src="/assets/backend-ui.js?v=20261108"></script>
+</body>
+</html>
